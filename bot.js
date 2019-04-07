@@ -8,6 +8,10 @@ const request = require('request');
 
 var battleData = null;
 
+// datastore for all moves taken with their game state
+var Datastore = require('nedb');
+var db = new Datastore({ filename: 'moves.db', autoload: true });
+
 class Pokemon {
   constructor(name, ability, stats, health, move1, move2, move3, move4, item, status) {
     this.name = name;
@@ -35,7 +39,8 @@ function createBattleData() {
       current: null,
       pokes: null
     },
-    weather: null
+    weather: null,
+    turn: 0
   };
   return battleData;
 }
@@ -106,6 +111,7 @@ function handleData(data) {
             parseEnemyPoke(newParts[2]);
           }
         }
+        console.log(battleData);
       }
       break;
     case 'request':
@@ -116,24 +122,118 @@ function handleData(data) {
         parseTeamPreview(req);
       }
       break;
-    case 'switch':
-      // set the current pokemon for that team
-    case 'drag':
-      // set the current pokemon for that team
-    case '-damage':
-      // update health of that pokemon
-    case '-heal':
-      // update health of that pokemon
-    case '-weather':
-      // update weather
+    case '\n':
+      // info on what happened this turn
+      parts = data.split("\n");
+      for(i = 0; i < parts.length; i++) {
+        innerParts = parts[i].split("|");
+        innerParts.splice(0,1); // first one always empty
+        switch(innerParts[0]) {
+          case 'switch':
+            var id = innerParts[1].substr(0,2);
+            if (id == battleData.ally.id) {
+              // ignoring the starting move for now
+              if (battleData.turn > 0) {
+                storeAction('switch', parsePokeName(innerParts[2]));
+              }
+              battleData.ally.current = parsePokeName(innerParts[2]);
+            } else if (id == battleData.enemy.id) {
+              battleData.enemy.current = parsePokeName(innerParts[2]);
+            }
+            break;
+          case 'move':
+            var id = innerParts[1].substr(0,2);
+            if (id == battleData.ally.id) {
+              storeAction('move', innerParts[2]);
+            }
+            break;
+          case 'drag':
+            // set the current pokemon for that team
+            break;
+          case '-damage':
+            // same as heal
+          case '-heal':
+            var id = innerParts[1].substr(0,2);
+
+            var index = innerParts[2].indexOf("/");
+            var newHealth = parseFloat(innerParts[2].substr(0, index));
+            var poke = null;
+
+            if (id == battleData.ally.id) {
+              poke = battleData.ally.pokes.get(battleData.ally.current)
+              poke.health = newHealth;
+            } else if (id == battleData.enemy.id) {
+              poke = battleData.enemy.pokes.get(battleData.enemy.current)
+              poke.health = newHealth;
+            }
+            break;
+          case '-boost':
+            // update positive stat boost of that pokemon
+          case '-unboost':
+            // update negative stat boost of that pokemon
+            break;
+          case '-weather':
+            // update weather
+            break;
+          case 'faint':
+            var id = innerParts[1].substr(0,2);
+
+            if (id == battleData.ally.id) {
+              poke = battleData.ally.pokes.get(battleData.ally.current)
+              poke.health = -1;
+            } else if (id == battleData.enemy.id) {
+              poke = battleData.enemy.pokes.get(battleData.enemy.current)
+              poke.health = -1;
+            }
+            break;
+          case 'turn':
+            battleData.turn += 1;
+            break;
+        }
+      }
+      break;
   }
+}
+
+function storeAction(type, value) {
+  var iterAlly = battleData.ally.pokes.values();
+  var iterEnemy = battleData.enemy.pokes.values();
+  action = {
+    "type" : type,
+    "value": value,
+    "gameState": {
+      "ally": {
+        "current": battleData.ally.current,
+        "poke1": iterAlly.next().value,
+        "poke2": iterAlly.next().value,
+        "poke3": iterAlly.next().value,
+        "poke4": iterAlly.next().value,
+        "poke5": iterAlly.next().value,
+        "poke6": iterAlly.next().value
+      },
+      "enemy": {
+        "current": battleData.enemy.current,
+        "poke1": iterEnemy.next().value,
+        "poke2": iterEnemy.next().value,
+        "poke3": iterEnemy.next().value,
+        "poke4": iterEnemy.next().value,
+        "poke5": iterEnemy.next().value,
+        "poke6": iterEnemy.next().value
+      },
+      "weather": battleData.weather,
+      "turn": battleData.turn
+    }
+  }
+  db.insert(action, function(err, newDoc) {
+    if(newDoc) console.log("Saved turn " + battleData.turn + " to db");
+    else console.log("Error saving to db");
+  });
 }
 
 function parseTeamPreview(req) {
   var pokemon = req.side.pokemon;
   for (i = 0; i < pokemon.length; i++) {
-    var index = pokemon[i].details.indexOf(",");
-    var name = (index == -1) ? pokemon[i].details : pokemon[i].details.substr(0, index);
+    var name = parsePokeName(pokemon[i].details);
     var ability = pokemon[i].baseAbility;
     var stats = pokemon[i].stats
     var health = 100.0;
@@ -155,8 +255,7 @@ function parseTeamPreview(req) {
 }
 
 function parseEnemyPoke(entireName) {
-  var index = entireName.indexOf(",");
-  var name = (index == -1) ? entireName : entireName.substr(0, index);
+  var name = parsePokeName(entireName);
   var pkmn = new Pokemon(name, null, null, 100.0, null, null, null, null, null, null);
   if (battleData.enemy.pokes == null) {
     var map = new Map();
@@ -165,6 +264,11 @@ function parseEnemyPoke(entireName) {
   } else {
     battleData.enemy.pokes.set(name, pkmn);
   }
+}
+
+function parsePokeName(nameWithGender) {
+  var index = nameWithGender.indexOf(",");
+  return ((index == -1) ? nameWithGender : nameWithGender.substr(0, index));
 }
 
 if(client) {
