@@ -7,6 +7,7 @@ const client = sockjs.create('http://sim.smogon.com:8000/showdown');
 const request = require('request');
 
 var battleData = null;
+var prevBattleData = null;
 
 // datastore for all moves taken with their game state
 var Datastore = require('nedb');
@@ -24,7 +25,9 @@ class Pokemon {
     this.move4 = move4;
     this.item = item;
     this.status = status;
+    this.types = [];
   }
+
 }
 
 function createBattleData() {
@@ -40,7 +43,8 @@ function createBattleData() {
       pokes: null
     },
     weather: null,
-    turn: 0
+    turn: 0,
+    turnActions: 0 // to see if this is the first action of the turn
   };
   return battleData;
 }
@@ -135,16 +139,20 @@ function handleData(data) {
               // ignoring the starting move for now
               if (battleData.turn > 0) {
                 storeAction('switch', parsePokeName(innerParts[2]));
+                battleData.turnActions += 1;
               }
               battleData.ally.current = parsePokeName(innerParts[2]);
+              battleData.ally.pokes.get(battleData.ally.current).stats = baseStats();
             } else if (id == battleData.enemy.id) {
               battleData.enemy.current = parsePokeName(innerParts[2]);
+              battleData.enemy.pokes.get(battleData.enemy.current).stats = baseStats();
             }
             break;
           case 'move':
             var id = innerParts[1].substr(0,2);
             if (id == battleData.ally.id) {
               storeAction('move', innerParts[2]);
+              battleData.turnActions += 1;
             }
             break;
           case 'drag':
@@ -160,17 +168,36 @@ function handleData(data) {
             var poke = null;
 
             if (id == battleData.ally.id) {
-              poke = battleData.ally.pokes.get(battleData.ally.current)
+              poke = battleData.ally.pokes.get(battleData.ally.current);
               poke.health = newHealth;
             } else if (id == battleData.enemy.id) {
-              poke = battleData.enemy.pokes.get(battleData.enemy.current)
+              poke = battleData.enemy.pokes.get(battleData.enemy.current);
               poke.health = newHealth;
             }
             break;
           case '-boost':
-            // update positive stat boost of that pokemon
+            var id = innerParts[1].substr(0,2);
+            var poke = null;
+
+            if (id == battleData.ally.id) {
+              poke = battleData.ally.pokes.get(battleData.ally.current);
+            } else if (id == battleData.enemy.id) {
+              poke = battleData.enemy.pokes.get(battleData.enemy.current)
+            }
+
+            poke.stats[innerParts[2]] += parseInt(innerParts[3]);
+            break;
           case '-unboost':
-            // update negative stat boost of that pokemon
+            var id = innerParts[1].substr(0,2);
+            var poke = null;
+
+            if (id == battleData.ally.id) {
+              poke = battleData.ally.pokes.get(battleData.ally.current);
+            } else if (id == battleData.enemy.id) {
+              poke = battleData.enemy.pokes.get(battleData.enemy.current)
+            }
+
+            poke.stats[innerParts[2]] -= parseInt(innerParts[3]);
             break;
           case '-weather':
             // update weather
@@ -187,6 +214,8 @@ function handleData(data) {
             }
             break;
           case 'turn':
+            prevBattleData = battleData;
+            battleData.turnActions = 0;
             battleData.turn += 1;
             break;
         }
@@ -195,37 +224,52 @@ function handleData(data) {
   }
 }
 
+// use previous battle data because we want game state before the turn
 function storeAction(type, value) {
-  var iterAlly = battleData.ally.pokes.values();
-  var iterEnemy = battleData.enemy.pokes.values();
+  var iterAlly = prevBattleData.ally.pokes.values();
+  var allyPoke = prevBattleData.ally.pokes.get(prevBattleData.ally.current);
+  var enemyPoke = prevBattleData.enemy.pokes.get(prevBattleData.enemy.current);
+
+  var poke1 = iterAlly.next().value;
+  var poke2 = iterAlly.next().value;
+  var poke3 = iterAlly.next().value;
+  var poke4 = iterAlly.next().value;
+  var poke5 = iterAlly.next().value;
+  var poke6 = iterAlly.next().value;
+
   action = {
+    "turn" : (battleData.turnActions > 0) ? "middle" : "start",
     "type" : type,
     "value": value,
     "gameState": {
       "ally": {
-        "current": battleData.ally.current,
-        "poke1": iterAlly.next().value,
-        "poke2": iterAlly.next().value,
-        "poke3": iterAlly.next().value,
-        "poke4": iterAlly.next().value,
-        "poke5": iterAlly.next().value,
-        "poke6": iterAlly.next().value
+        "current": {
+          "name": allyPoke.name,
+          "health": allyPoke.health,
+          "stats": allyPoke.stats,
+          "types": allyPoke.types,
+          "status": allyPoke.status
+        },
+        "poke1": {"name": poke1.name, "health": poke1.health, "status": poke1.status},
+        "poke2": {"name": poke2.name, "health": poke2.health, "status": poke2.status},
+        "poke3": {"name": poke3.name, "health": poke3.health, "status": poke3.status},
+        "poke4": {"name": poke4.name, "health": poke4.health, "status": poke4.status},
+        "poke5": {"name": poke5.name, "health": poke5.health, "status": poke5.status},
+        "poke6": {"name": poke6.name, "health": poke6.health, "status": poke6.status},
       },
       "enemy": {
-        "current": battleData.enemy.current,
-        "poke1": iterEnemy.next().value,
-        "poke2": iterEnemy.next().value,
-        "poke3": iterEnemy.next().value,
-        "poke4": iterEnemy.next().value,
-        "poke5": iterEnemy.next().value,
-        "poke6": iterEnemy.next().value
+        "name": enemyPoke.name,
+        "health": enemyPoke.health,
+        "stats": enemyPoke.stats,
+        "types": enemyPoke.types,
+        "status": enemyPoke.status
       },
-      "weather": battleData.weather,
-      "turn": battleData.turn
+      "weather": prevBattleData.weather,
+      "turn": prevBattleData.turn
     }
   }
   db.insert(action, function(err, newDoc) {
-    if(newDoc) console.log("Saved turn " + battleData.turn + " to db");
+    if(newDoc) console.log("Saved turn " + prevBattleData.turn + " to db");
     else console.log("Error saving to db");
   });
 }
@@ -235,7 +279,8 @@ function parseTeamPreview(req) {
   for (i = 0; i < pokemon.length; i++) {
     var name = parsePokeName(pokemon[i].details);
     var ability = pokemon[i].baseAbility;
-    var stats = pokemon[i].stats
+    // used to show stat boosts, we don't care about actual values
+    var stats = baseStats();
     var health = 100.0;
     var move1 = pokemon[i].moves[0];
     var move2 = pokemon[i].moves[1];
@@ -256,7 +301,7 @@ function parseTeamPreview(req) {
 
 function parseEnemyPoke(entireName) {
   var name = parsePokeName(entireName);
-  var pkmn = new Pokemon(name, null, null, 100.0, null, null, null, null, null, null);
+  var pkmn = new Pokemon(name, null, baseStats(), 100.0, null, null, null, null, null, null);
   if (battleData.enemy.pokes == null) {
     var map = new Map();
     map.set(name, pkmn);
@@ -264,6 +309,10 @@ function parseEnemyPoke(entireName) {
   } else {
     battleData.enemy.pokes.set(name, pkmn);
   }
+}
+
+function baseStats() {
+  return { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
 }
 
 function parsePokeName(nameWithGender) {
