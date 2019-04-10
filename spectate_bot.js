@@ -26,6 +26,7 @@ class Pokemon {
     this.item = item;
     this.status = status;
     this.types = [];
+    setTypes(this);
   }
 
 }
@@ -47,6 +48,20 @@ function createBattleData() {
     turnActions: 0 // to see if this is the first action of the turn
   };
   return battleData;
+}
+
+function setTypes(pokemon) {
+  var arr = [];
+  request('https://pokeapi.co/api/v2/pokemon/' + pokemon.name.toLowerCase().replace(" ","-"), function (error, response, body) {
+    if (response.body.substr(0,9) == "Not Found") {
+      return;
+    }
+    var parsed = JSON.parse(response.body);
+    for (var i = 0; i < parsed.types.length; i++) {
+      arr[i] = parsed.types[i].type.name;
+    }
+    pokemon.types = arr;
+  });
 }
 
 function handleData(data) {
@@ -236,7 +251,6 @@ function storeAction(type, value) {
   var poke4 = iterAlly.next().value;
   var poke5 = iterAlly.next().value;
   var poke6 = iterAlly.next().value;
-
   action = {
     "turn" : (battleData.turnActions > 0) ? "middle" : "start",
     "type" : type,
@@ -270,7 +284,7 @@ function storeAction(type, value) {
   }
   db.insert(action, function(err, newDoc) {
     if(newDoc) console.log("Saved turn " + prevBattleData.turn + " to db");
-    else console.log("Error saving to db");
+    else console.log("Error saving to db\n" + err);
   });
 }
 
