@@ -11,6 +11,9 @@ var battleData = null;
 var roomId = "";
 
 var dtl = require('./dtl');
+var team = require('./team');
+
+console.log(dtl.dtreeScraggy);
 
 class Pokemon {
   constructor(name, ability, stats, health, move1, move2, move3, move4, item, status) {
@@ -140,6 +143,9 @@ function handleData(data) {
         if(data && data.curuser && data.curuser.loggedin) {
           client.write('|/trn ' + account.username + ',0,' + data.assertion);
           console.log('Sent trn to login');
+          client.write('|/utm ' + team.text);
+          client.write('|/search lc');
+          console.log('searching lc with team\n' + team.text);
         } else {
           console.log("Error logging in");
           process.exit();
@@ -177,26 +183,9 @@ function handleData(data) {
       var req = JSON.parse(parts[1]);
       if (req.teamPreview) {
         parseTeamPreview(req);
-        sendMessage(roomId + '|/choose team 1|' + req.rqid);
+        sendMessage(roomId + '|/choose team 2|' + req.rqid);
       } else if (req.active && req.active.length > 0) {
-        if (battleData.ally.current == 'Scraggy') {
-          console.log("using dtl");
-          var root = dtl.dtreeScraggy;
-          while(true) {
-            if (root.func != null) {
-              if (root.func(getGameState())) {
-                root = root.left;
-              } else {
-                root = root.right;
-              }
-            } else {
-              sendMessage(roomId + '|/choose ' + root.action + '|' + req.rqid);
-              break;
-            }
-          }
-        } else {
-          sendMessage(roomId + '|/choose move 1|' + req.rqid);
-        }
+        makeDecision(req);
       } else if (req.forceSwitch) {
         sendMessage(roomId + '|/choose switch 6|' + req.rqid);
       }
@@ -301,9 +290,31 @@ function sleep(ms) {
 }
 
 async function sendMessage(msg) {
-  await sleep(2000);
+  await sleep(500);
   client.write(msg);
   console.log("sent request to server: " + msg);
+}
+
+async function makeDecision(req) {
+  await sleep(2000);
+  if (battleData.ally.current == 'Scraggy') {
+    console.log("using dtl");
+    var root = dtl.dtreeScraggy;
+    while(true) {
+      if (root.func != null) {
+        if (root.func(getGameState())) {
+          root = root.left;
+        } else {
+          root = root.right;
+        }
+      } else {
+        sendMessage(roomId + '|/choose ' + root.action + '|' + req.rqid);
+        break;
+      }
+    }
+  } else {
+    sendMessage(roomId + '|/choose move 1|' + req.rqid);
+  }
 }
 
 // REUSE THE ONES FROM SPECTATE

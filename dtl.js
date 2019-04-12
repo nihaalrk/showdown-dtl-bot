@@ -110,10 +110,6 @@ function decisionTreeNode(examples) {
 }
 db.loadDatabase();
 
-var dtreeScraggy = null;
-
 db.find({turn: 'start', "gameState.ally.current.name": 'Scraggy'}, function (err, docs) {
-	dtreeScraggy = decisionTreeNode(docs);
+	module.exports.dtreeScraggy = decisionTreeNode(docs);
 });
-
-module.exports.dtreeScraggy = dtreeScraggy;
