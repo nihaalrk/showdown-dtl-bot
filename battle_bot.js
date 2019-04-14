@@ -12,45 +12,7 @@ var roomId = "";
 
 var dtl = require('./dtl');
 var team = require('./team');
-
-console.log(dtl.dtreeScraggy);
-
-class Pokemon {
-  constructor(name, ability, stats, health, move1, move2, move3, move4, item, status) {
-    this.name = name;
-    this.ability = ability;
-    this.stats = stats;
-    this.health = health;
-    this.move1 = move1;
-    this.move2 = move2;
-    this.move3 = move3;
-    this.move4 = move4;
-    this.item = item;
-    this.status = status;
-    this.types = [];
-    setTypes(this);
-  }
-
-}
-
-function createBattleData() {
-  var battleData = {
-    ally: {
-      id: null,
-      current: null,
-      pokes: null
-    },
-    enemy: {
-      id: null,
-      current: null,
-      pokes: null
-    },
-    weather: null,
-    turn: 0,
-    turnActions: 0 // to see if this is the first action of the turn
-  };
-  return battleData;
-}
+var bot = require('./spectate_bot');
 
 function getGameState() {
   var iterAlly = battleData.ally.pokes.values();
@@ -90,20 +52,6 @@ function getGameState() {
 
   }
   return action;
-}
-
-function setTypes(pokemon) {
-  var arr = [];
-  request('https://pokeapi.co/api/v2/pokemon/' + pokemon.name.toLowerCase().replace(" ","-"), function (error, response, body) {
-    if (response.body.substr(0,9) == "Not Found") {
-      return;
-    }
-    var parsed = JSON.parse(response.body);
-    for (var i = 0; i < parsed.types.length; i++) {
-      arr[i] = parsed.types[i].type.name;
-    }
-    pokemon.types = arr;
-  });
 }
 
 function handleData(data) {
@@ -154,7 +102,7 @@ function handleData(data) {
       break;
     // reset battle data
     case 'init':
-      battleData = createBattleData();
+      battleData = bot.createBattleData();
       break;
     case 'player':
       // set player ids if not set yet
@@ -172,7 +120,7 @@ function handleData(data) {
         for(i = 0; i < parts.length; i++) {
           if (parts[i].substr(0, 4) == "|pok" && parts[i].substr(0, 8) == "|poke|" + battleData.enemy.id) {
             var newParts = parts[i].substr(1).split("|");
-            parseEnemyPoke(newParts[2]);
+            bot.parseEnemyPoke(battleData, newParts[2]);
           }
         }
         console.log(battleData);
@@ -182,7 +130,7 @@ function handleData(data) {
       if (parts[1] == "") return;
       var req = JSON.parse(parts[1]);
       if (req.teamPreview) {
-        parseTeamPreview(req);
+        bot.parseTeamPreview(battleData, req);
         sendMessage(roomId + '|/choose team 2|' + req.rqid);
       } else if (req.active && req.active.length > 0) {
         makeDecision(req);
@@ -204,11 +152,11 @@ function handleData(data) {
               if (battleData.turn > 0) {
                 battleData.turnActions += 1;
               }
-              battleData.ally.current = parsePokeName(innerParts[2]);
-              battleData.ally.pokes.get(battleData.ally.current).stats = baseStats();
+              battleData.ally.current = bot.parsePokeName(innerParts[2]);
+              battleData.ally.pokes.get(battleData.ally.current).stats = bot.baseStats();
             } else if (id == battleData.enemy.id) {
-              battleData.enemy.current = parsePokeName(innerParts[2]);
-              battleData.enemy.pokes.get(battleData.enemy.current).stats = baseStats();
+              battleData.enemy.current = bot.parsePokeName(innerParts[2]);
+              battleData.enemy.pokes.get(battleData.enemy.current).stats = bot.baseStats();
             }
             break;
           case 'move':
@@ -315,53 +263,6 @@ async function makeDecision(req) {
   } else {
     sendMessage(roomId + '|/choose move 1|' + req.rqid);
   }
-}
-
-// REUSE THE ONES FROM SPECTATE
-function parseTeamPreview(req) {
-  var pokemon = req.side.pokemon;
-  for (i = 0; i < pokemon.length; i++) {
-    var name = parsePokeName(pokemon[i].details);
-    var ability = pokemon[i].baseAbility;
-    // used to show stat boosts, we don't care about actual values
-    var stats = baseStats();
-    var health = 100.0;
-    var move1 = pokemon[i].moves[0];
-    var move2 = pokemon[i].moves[1];
-    var move3 = pokemon[i].moves[2];
-    var move4 = pokemon[i].moves[3];
-    var item = pokemon[i].item;
-    var status = null;
-    var pkmn = new Pokemon(name, ability, stats, health, move1, move2, move3, move4, item, status);
-    if (battleData.ally.pokes == null) {
-      var map = new Map();
-      map.set(name, pkmn);
-      battleData.ally.pokes = map;
-    } else {
-      battleData.ally.pokes.set(name, pkmn);
-    }
-  }
-}
-
-function parseEnemyPoke(entireName) {
-  var name = parsePokeName(entireName);
-  var pkmn = new Pokemon(name, null, baseStats(), 100.0, null, null, null, null, null, null);
-  if (battleData.enemy.pokes == null) {
-    var map = new Map();
-    map.set(name, pkmn);
-    battleData.enemy.pokes = map;
-  } else {
-    battleData.enemy.pokes.set(name, pkmn);
-  }
-}
-
-function baseStats() {
-  return { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
-}
-
-function parsePokeName(nameWithGender) {
-  var index = nameWithGender.indexOf(",");
-  return ((index == -1) ? nameWithGender : nameWithGender.substr(0, index));
 }
 
 if(client) {

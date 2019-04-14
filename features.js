@@ -71,6 +71,16 @@ function haveBoostingMove(gameState) {
 	return false;
 }
 
+function haveHazardsMove(gameState) {
+	var ally = gameState.ally.current.name;
+	for (var j = 0; j < teamData[ally].moves.length; j++) {
+		if (teamData[ally].moves[j].hazard) {
+			return true;
+		}
+	}
+	return false;
+}
+
 module.exports.possibleDecisions = [
 	haveSuperEffectiveMove,
 	haveEffectiveStabMove,

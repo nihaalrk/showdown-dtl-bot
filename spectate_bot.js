@@ -28,20 +28,26 @@ class Pokemon {
     this.types = [];
     setTypes(this);
   }
-
 }
+module.exports.Pokemon = Pokemon;
 
 function createBattleData() {
   var battleData = {
     ally: {
       id: null,
       current: null,
-      pokes: null
+      pokes: null,
+      stealthrock: false,
+      spikes: 0,
+      toxicspikes: 0
     },
     enemy: {
       id: null,
       current: null,
-      pokes: null
+      pokes: null,
+      stealthrock: false,
+      spikes: 0,
+      toxicspikes: 0
     },
     weather: null,
     turn: 0,
@@ -49,6 +55,7 @@ function createBattleData() {
   };
   return battleData;
 }
+module.exports.createBattleData = createBattleData;
 
 function setTypes(pokemon) {
   var arr = [];
@@ -63,6 +70,7 @@ function setTypes(pokemon) {
     pokemon.types = arr;
   });
 }
+module.exports.setTypes = setTypes;
 
 function handleData(data) {
 
@@ -127,7 +135,7 @@ function handleData(data) {
         for(i = 0; i < parts.length; i++) {
           if (parts[i].substr(0, 4) == "|pok" && parts[i].substr(0, 8) == "|poke|" + battleData.enemy.id) {
             var newParts = parts[i].substr(1).split("|");
-            parseEnemyPoke(newParts[2]);
+            parseEnemyPoke(battleData, newParts[2]);
           }
         }
         console.log(battleData);
@@ -138,7 +146,7 @@ function handleData(data) {
       var req = JSON.parse(parts[1]);
       // if request not empty and has teamPreview, parse for ally pokemon
       if (req.teamPreview) {
-        parseTeamPreview(req);
+        parseTeamPreview(battleData, req);
       }
       break;
     case '\n':
@@ -217,6 +225,9 @@ function handleData(data) {
           case '-weather':
             // update weather
             break;
+          case '-sidestart':
+
+            break;
           case 'faint':
             var id = innerParts[1].substr(0,2);
 
@@ -288,7 +299,7 @@ function storeAction(type, value) {
   });
 }
 
-function parseTeamPreview(req) {
+function parseTeamPreview(battleData, req) {
   var pokemon = req.side.pokemon;
   for (i = 0; i < pokemon.length; i++) {
     var name = parsePokeName(pokemon[i].details);
@@ -313,7 +324,7 @@ function parseTeamPreview(req) {
   }
 }
 
-function parseEnemyPoke(entireName) {
+function parseEnemyPoke(battleData, entireName) {
   var name = parsePokeName(entireName);
   var pkmn = new Pokemon(name, null, baseStats(), 100.0, null, null, null, null, null, null);
   if (battleData.enemy.pokes == null) {
@@ -333,6 +344,11 @@ function parsePokeName(nameWithGender) {
   var index = nameWithGender.indexOf(",");
   return ((index == -1) ? nameWithGender : nameWithGender.substr(0, index));
 }
+
+module.exports.parseTeamPreview = parseTeamPreview;
+module.exports.parseEnemyPoke = parseEnemyPoke;
+module.exports.baseStats = baseStats;
+module.exports.parsePokeName = parsePokeName;
 
 if(client) {
   client.on('connection', function() {
