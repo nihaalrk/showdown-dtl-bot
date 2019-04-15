@@ -47,7 +47,9 @@ function getGameState() {
       "health": enemyPoke.health,
       "stats": enemyPoke.stats,
       "types": enemyPoke.types,
-      "status": enemyPoke.status
+      "status": enemyPoke.status,
+      "stealthrock": battleData.enemy.stealthrock,
+      "spikes": battleData.enemy.spikes
     }
 
   }
@@ -212,6 +214,19 @@ function handleData(data) {
           case '-weather':
             // update weather
             break;
+          case '-sidestart':
+            var id = innerParts[1].substr(0,2);
+
+            if (id == battleData.enemy.id) {
+              if (innerParts[2] == "Stealth Rock") {
+                battleData.enemy.stealthrock = true;
+              } else if (innerParts[2] == "Spikes") {
+                battleData.enemy.spikes += 1;
+              } else if (innerParts[2] == "Toxic Spikes") {
+                battleData.enemy.toxicspikes += 1;
+              } 
+            }
+            break;
           case 'faint':
             var id = innerParts[1].substr(0,2);
 
@@ -248,13 +263,17 @@ async function makeDecision(req) {
   if (battleData.ally.current == 'Scraggy') {
     console.log("using dtl");
     var root = dtl.dtreeScraggy;
+    var gamestate = getGameState();
     while(true) {
       if (root.func != null) {
-        if (root.func(getGameState())) {
+        if (root.func(gamestate)) {
           root = root.left;
         } else {
           root = root.right;
         }
+      } else if (root.isFunction) {
+        sendMessage(roomId + '|/choose ' + root.action(gamestate) + '|' + req.rqid);
+        break;
       } else {
         sendMessage(roomId + '|/choose ' + root.action + '|' + req.rqid);
         break;

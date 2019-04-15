@@ -43,6 +43,26 @@ function haveSuperEffectiveMove(gameState) {
 	return false;
 }
 
+// selects move with highest effectiveness
+function useSuperEffectiveMove(gameState) {
+	var ally = gameState.ally.current.name;
+	var enemyTypes = gameState.enemy.types;
+	var highestEffectiveness = 1.0;
+	var bestMove = "";
+	for (var j = 0; j < teamData[ally].moves.length; j++) {
+		var move = teamData[ally].moves[j].type;
+		var effectiveness = 1.0;
+		for (var i = 0; i < enemyTypes.length; i++) {
+			effectiveness *= superEffectiveness[types.indexOf(move)][types.indexOf(enemyTypes[i])];
+		}
+		if (effectiveness > highestEffectiveness) {
+			highestEffectiveness = effectiveness;
+			bestMove = teamData[ally].moves[j].name;
+		}
+	}
+	return "move " + bestMove;
+}
+
 function haveEffectiveStabMove(gameState) {
 	var ally = gameState.ally.current.name;
 	var enemyTypes = gameState.enemy.types;
@@ -61,6 +81,28 @@ function haveEffectiveStabMove(gameState) {
 	return false;
 }
 
+// selects stab move with highest effectiveness
+function useEffectiveStabMove(gameState) {
+	var ally = gameState.ally.current.name;
+	var enemyTypes = gameState.enemy.types;
+	var highestEffectiveness = 1.0;
+	var bestMove = "";
+	for (var j = 0; j < teamData[ally].moves.length; j++) {
+		if (teamData[ally].moves[j].stab) {
+			var move = teamData[ally].moves[j].type;
+			var effectiveness = 1.0;
+			for (var i = 0; i < enemyTypes.length; i++) {
+				effectiveness *= superEffectiveness[types.indexOf(move)][types.indexOf(enemyTypes[i])];
+			}
+			if (effectiveness > highestEffectiveness) {
+				highestEffectiveness = effectiveness;
+				bestMove = teamData[ally].moves[j].name;
+			}
+		}
+	}
+	return "move " + bestMove;
+}
+
 function haveBoostingMove(gameState) {
 	var ally = gameState.ally.current.name;
 	for (var j = 0; j < teamData[ally].moves.length; j++) {
@@ -71,22 +113,56 @@ function haveBoostingMove(gameState) {
 	return false;
 }
 
-function haveHazardsMove(gameState) {
+function useBoostingMove(gameState) {
 	var ally = gameState.ally.current.name;
 	for (var j = 0; j < teamData[ally].moves.length; j++) {
-		if (teamData[ally].moves[j].hazard) {
+		if (teamData[ally].moves[j].boost) {
+			return "move " + teamData[ally].moves[j].name;
+		}
+	}
+	return "";
+}
+
+function haveUsableHazardsMove(gameState) {
+	var ally = gameState.ally.current.name;
+	for (var j = 0; j < teamData[ally].moves.length; j++) {
+		if (teamData[ally].moves[j].hazard && canUseHazardsMove(teamData[ally].moves[j].name, gameState)) {
 			return true;
 		}
 	}
 	return false;
 }
 
+function useUsableHazardsMove(gameState) {
+	var ally = gameState.ally.current.name;
+	for (var j = 0; j < teamData[ally].moves.length; j++) {
+		if (teamData[ally].moves[j].hazard && canUseHazardsMove(teamData[ally].moves[j].name, gameState)) {
+			return "move " + teamData[ally].moves[j].name;
+		}
+	}
+	return "";
+}
+
+function canUseHazardsMove(move, gameState) {
+	if (move == "stealthrock") {
+		return !gameState.enemy.stealthrock;
+	} else if (move == "spikes") {
+		return gameState.enemy.spikes < 3;
+	} else {
+		return gameState.enemy.toxicspikes < 2;
+	}
+}
+
 module.exports.possibleDecisions = [
 	haveSuperEffectiveMove,
 	haveEffectiveStabMove,
-	haveBoostingMove
+	haveBoostingMove,
+	haveUsableHazardsMove
 ]
 
-
-
-
+module.exports.possibleActions = [
+	useSuperEffectiveMove,
+	useEffectiveStabMove,
+	useBoostingMove,
+	useUsableHazardsMove
+]

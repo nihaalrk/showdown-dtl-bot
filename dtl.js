@@ -14,8 +14,9 @@ class DecisionTreeNode {
 
 class DecisionTreeLeaf {
 
-	constructor(action) {
+	constructor(action, isFunc) {
 		this.action = action;
+		this.isFunction = isFunc;
 	}
 
 }
@@ -23,6 +24,7 @@ class DecisionTreeLeaf {
 function decisionTreeNode(examples) {
 	var bestDecision = null;
 	var bestEntropy = 1000000;
+	var bestDecisionIndex = null;
 
 	var yesMajority = null;
 	var noMajority = null;
@@ -89,19 +91,20 @@ function decisionTreeNode(examples) {
 		var expectedEntropy = (yesCount / examples.length) * entropyYes + (noCount / examples.length) * entropyNo;
 		if (expectedEntropy < bestEntropy) {
 			bestDecision = features.possibleDecisions[i];
+			bestDecisionIndex = i;
 			bestEntropy = expectedEntropy;
 		}
 	}
 
 	var leftNode = null;
 	if (yesMajority != null) {
-		leftNode = new DecisionTreeLeaf(yesMajority);
+		leftNode = new DecisionTreeLeaf(features.possibleActions[bestDecisionIndex], true);
 	} else {
 		leftNode = decisionTreeNode(yes);
 	}
 	var rightNode = null;
 	if (noMajority != null) {
-		rightNode = new DecisionTreeLeaf(noMajority);
+		rightNode = new DecisionTreeLeaf(noMajority, false);
 	} else {
 		rightNode = decisionTreeNode(no);
 	}

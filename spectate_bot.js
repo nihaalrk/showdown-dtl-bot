@@ -226,7 +226,17 @@ function handleData(data) {
             // update weather
             break;
           case '-sidestart':
+            var id = innerParts[1].substr(0,2);
 
+            if (id == battleData.enemy.id) {
+              if (innerParts[2] == "Stealth Rock") {
+                battleData.enemy.stealthrock = true;
+              } else if (innerParts[2] == "Spikes") {
+                battleData.enemy.spikes += 1;
+              } else if (innerParts[2] == "Toxic Spikes") {
+                battleData.enemy.toxicspikes += 1;
+              } 
+            }
             break;
           case 'faint':
             var id = innerParts[1].substr(0,2);
@@ -287,7 +297,9 @@ function storeAction(type, value) {
         "health": enemyPoke.health,
         "stats": enemyPoke.stats,
         "types": enemyPoke.types,
-        "status": enemyPoke.status
+        "status": enemyPoke.status,
+        "stealthrock": prevBattleData.enemy.stealthrock,
+        "spikes": prevBattleData.enemy.spikes
       },
       "weather": prevBattleData.weather,
       "turn": prevBattleData.turn
