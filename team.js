@@ -1,5 +1,6 @@
 module.exports = {
 	Dwebble: {
+		types: ["bug", "rock"],
 		moves: [
 			{
 				name: "stealthrock",
@@ -36,6 +37,7 @@ module.exports = {
 		]
 	}, 
 	Scraggy: {
+		types: ["fighting", "dark"],
 		moves: [
 			{
 				name: "knockoff",
@@ -72,6 +74,7 @@ module.exports = {
 		]
 	}, 
 	Vullaby: {
+		types: ["dark", "flying"],
 		moves: [
 			{
 				name: "darkpulse",
@@ -108,6 +111,7 @@ module.exports = {
 		]
 	}, 
 	Pumpkaboo: {
+		types: ["grass", "ghost"],
 		moves: [
 			{
 				name: "gigadrain",
@@ -144,6 +148,7 @@ module.exports = {
 		]
 	}, 
 	Pawniard: {
+		types: ["dark", "steel"],
 		moves: [
 			{
 				name: "knockoff",
@@ -180,6 +185,7 @@ module.exports = {
 		]
 	}, 
 	Chinchou: {
+		types: ["water", "electric"],
 		moves: [
 			{
 				name: "voltswitch",

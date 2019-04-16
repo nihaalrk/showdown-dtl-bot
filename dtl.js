@@ -39,6 +39,10 @@ function decisionTreeNode(examples) {
 
 		for (var j = 0; j < examples.length; j++) {
 			var idString = examples[j].type + ' ' + examples[j].value;
+			// treat all switches the same
+			if (examples[j].type == "switch") {
+				idString = examples[j].type;
+			}
 			if (features.possibleDecisions[i](examples[j].gameState)) {
 				yes[yesCount] = examples[j];
 				yesCount++;
@@ -97,13 +101,21 @@ function decisionTreeNode(examples) {
 	}
 
 	var leftNode = null;
-	if (yesMajority != null) {
+	if (bestDecisionIndex < features.possibleActions.length) {
 		leftNode = new DecisionTreeLeaf(features.possibleActions[bestDecisionIndex], true);
+	} else if (yesMajority != null && yesMajority == "switch") {
+		// use the default action for switching
+		leftNode = new DecisionTreeLeaf(features.switch, true);
+	} else if (yesMajority != null) {
+		leftNode = new DecisionTreeLeaf(yesMajority, false);
 	} else {
 		leftNode = decisionTreeNode(yes);
 	}
 	var rightNode = null;
-	if (noMajority != null) {
+	if (noMajority != null && noMajority == "switch") {
+		// use the default action for switching
+		rightNode = new DecisionTreeLeaf(features.switch, true);
+	} else if (noMajority != null) {
 		rightNode = new DecisionTreeLeaf(noMajority, false);
 	} else {
 		rightNode = decisionTreeNode(no);
@@ -116,3 +128,14 @@ db.loadDatabase();
 db.find({turn: 'start', "gameState.ally.current.name": 'Scraggy'}, function (err, docs) {
 	module.exports.dtreeScraggy = decisionTreeNode(docs);
 });
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function logDTL() {
+  await sleep(500);
+  console.log(module.exports.dtreeScraggy);
+}
+
+logDTL();

@@ -12,7 +12,7 @@ var roomId = "";
 
 var dtl = require('./dtl');
 var team = require('./team');
-var bot = require('./spectate_bot');
+var parser = require('./parsing');
 
 function getGameState() {
   var iterAlly = battleData.ally.pokes.values();
@@ -104,7 +104,7 @@ function handleData(data) {
       break;
     // reset battle data
     case 'init':
-      battleData = bot.createBattleData();
+      battleData = parser.createBattleData();
       break;
     case 'player':
       // set player ids if not set yet
@@ -122,7 +122,7 @@ function handleData(data) {
         for(i = 0; i < parts.length; i++) {
           if (parts[i].substr(0, 4) == "|pok" && parts[i].substr(0, 8) == "|poke|" + battleData.enemy.id) {
             var newParts = parts[i].substr(1).split("|");
-            bot.parseEnemyPoke(battleData, newParts[2]);
+            parser.parseEnemyPoke(battleData, newParts[2]);
           }
         }
         console.log(battleData);
@@ -132,7 +132,7 @@ function handleData(data) {
       if (parts[1] == "") return;
       var req = JSON.parse(parts[1]);
       if (req.teamPreview) {
-        bot.parseTeamPreview(battleData, req);
+        parser.parseTeamPreview(battleData, req);
         sendMessage(roomId + '|/choose team 2|' + req.rqid);
       } else if (req.active && req.active.length > 0) {
         makeDecision(req);
@@ -154,11 +154,11 @@ function handleData(data) {
               if (battleData.turn > 0) {
                 battleData.turnActions += 1;
               }
-              battleData.ally.current = bot.parsePokeName(innerParts[2]);
-              battleData.ally.pokes.get(battleData.ally.current).stats = bot.baseStats();
+              battleData.ally.current = parser.parsePokeName(innerParts[2]);
+              battleData.ally.pokes.get(battleData.ally.current).stats = parser.baseStats();
             } else if (id == battleData.enemy.id) {
-              battleData.enemy.current = bot.parsePokeName(innerParts[2]);
-              battleData.enemy.pokes.get(battleData.enemy.current).stats = bot.baseStats();
+              battleData.enemy.current = parser.parsePokeName(innerParts[2]);
+              battleData.enemy.pokes.get(battleData.enemy.current).stats = parser.baseStats();
             }
             break;
           case 'move':
@@ -168,7 +168,14 @@ function handleData(data) {
             }
             break;
           case 'drag':
-            // set the current pokemon for that team
+            var id = innerParts[1].substr(0,2);
+            if (id == battleData.ally.id) {
+              battleData.ally.current = parser.parsePokeName(innerParts[2]);
+              battleData.ally.pokes.get(battleData.ally.current).stats = parser.baseStats();
+            } else if (id == battleData.enemy.id) {
+              battleData.enemy.current = parser.parsePokeName(innerParts[2]);
+              battleData.enemy.pokes.get(battleData.enemy.current).stats = parser.baseStats();
+            }
             break;
           case '-damage':
             // same as heal
@@ -218,7 +225,7 @@ function handleData(data) {
             var id = innerParts[1].substr(0,2);
 
             if (id == battleData.enemy.id) {
-              if (innerParts[2] == "Stealth Rock") {
+              if (innerParts[2] == "move: Stealth Rock") {
                 battleData.enemy.stealthrock = true;
               } else if (innerParts[2] == "Spikes") {
                 battleData.enemy.spikes += 1;
