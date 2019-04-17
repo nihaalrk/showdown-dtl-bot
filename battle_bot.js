@@ -14,6 +14,8 @@ var dtl = require('./dtl');
 var team = require('./team');
 var parser = require('./parsing');
 
+var lastReqId = 1;
+
 function getGameState() {
   var iterAlly = battleData.ally.pokes.values();
   var allyPoke = battleData.ally.pokes.get(battleData.ally.current);
@@ -134,10 +136,17 @@ function handleData(data) {
       if (req.teamPreview) {
         parser.parseTeamPreview(battleData, req);
         sendMessage(roomId + '|/choose team 1|' + req.rqid);
+        lastReqId = req.rqid;
       } else if (req.forceSwitch || (req.active && req.active.length > 0)) {
         makeDecision(req);
+        lastReqId = req.rqid;
       }
       break;
+    case 'error':
+      // there are a variety of error messages that can show up, for now I'm handling one of the more common occurrences
+      if (parts[1].includes('You need a switch response')) {
+        sendMessage(roomId + '|/choose switch 6|' + lastReqId);
+      }
     case '\n':
       // info on what happened this turn
       parts = data.split("\n");
@@ -156,7 +165,7 @@ function handleData(data) {
               battleData.ally.pokes.get(battleData.ally.current).stats = parser.baseStats();
             } else if (id == battleData.enemy.id) {
               battleData.enemy.current = parser.parsePokeName(innerParts[2]);
-              
+
               // hacky solution for cases where the enemy pokemon has multiple forms which change its name
               if (battleData.enemy.pokes.get(battleData.enemy.current) == undefined) {
                 var newName = battleData.enemy.current.substr(0, battleData.enemy.current.indexOf("-")+1) + "*";
