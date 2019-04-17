@@ -26,8 +26,10 @@ function decisionTreeNode(examples) {
 	var bestEntropy = 1000000;
 	var bestDecisionIndex = null;
 
-	var yesMajority = null;
-	var noMajority = null;
+	var yesMajority = [];
+	var noMajority = [];
+	var yesExamples = [];
+	var noExamples = [];
 
 	for (var i = 0; i < features.possibleDecisions.length; i++) {
 		var yes = [];
@@ -36,6 +38,8 @@ function decisionTreeNode(examples) {
 		var no = [];
 		var noCount = 0;
 		var noMap = new Map();
+		yesMajority[i] = null;
+		noMajority[i] = null;
 
 		for (var j = 0; j < examples.length; j++) {
 			var idString = examples[j].type + ' ' + examples[j].value;
@@ -63,6 +67,8 @@ function decisionTreeNode(examples) {
 				}
 			}
 		}
+		yesExamples[i] = yes;
+		noExamples[i] = no;
 
 		var entropyYes = 0;
 		var iterator1 = yesMap.entries();
@@ -73,7 +79,7 @@ function decisionTreeNode(examples) {
 			}
 			var p = next.value[1] / yesCount;
 			if (p >= 0.75) {
-				yesMajority = next.value[0];
+				yesMajority[i] = next.value[0];
 			}
 			entropyYes += -1 * p * Math.log2(p);
 		}
@@ -87,7 +93,7 @@ function decisionTreeNode(examples) {
 			}
 			var p = next.value[1] / noCount;
 			if (p >= 0.75) {
-				noMajority = next.value[0];
+				noMajority[i] = next.value[0];
 			}
 			entropyNo += -1 * p * Math.log2(p);
 		}
@@ -99,43 +105,50 @@ function decisionTreeNode(examples) {
 			bestEntropy = expectedEntropy;
 		}
 	}
-
 	var leftNode = null;
 	if (bestDecisionIndex < features.possibleActions.length) {
 		leftNode = new DecisionTreeLeaf(features.possibleActions[bestDecisionIndex], true);
-	} else if (yesMajority != null && yesMajority == "switch") {
+	} else if (yesMajority[bestDecisionIndex] != null && yesMajority[bestDecisionIndex] == "switch") {
 		// use the default action for switching
 		leftNode = new DecisionTreeLeaf(features.switch, true);
-	} else if (yesMajority != null) {
-		leftNode = new DecisionTreeLeaf(yesMajority, false);
+	} else if (yesMajority[bestDecisionIndex] != null) {
+		leftNode = new DecisionTreeLeaf(yesMajority[bestDecisionIndex], false);
 	} else {
-		leftNode = decisionTreeNode(yes);
+		leftNode = decisionTreeNode(yesExamples[bestDecisionIndex]);
 	}
 	var rightNode = null;
-	if (noMajority != null && noMajority == "switch") {
+
+	if (noMajority[bestDecisionIndex] != null && noMajority[bestDecisionIndex] == "switch") {
 		// use the default action for switching
 		rightNode = new DecisionTreeLeaf(features.switch, true);
-	} else if (noMajority != null) {
-		rightNode = new DecisionTreeLeaf(noMajority, false);
+	} else if (noMajority[bestDecisionIndex] != null) {
+		rightNode = new DecisionTreeLeaf(noMajority[bestDecisionIndex], false);
 	} else {
-		rightNode = decisionTreeNode(no);
+		rightNode = decisionTreeNode(noExamples[bestDecisionIndex]);
 	}
 	var tree = new DecisionTreeNode(bestDecision, leftNode, rightNode);
 	return tree;
 }
 db.loadDatabase();
+module.exports.dtree = [];
 
+db.find({turn: 'start', "gameState.ally.current.name": 'Dwebble'}, function (err, docs) {
+	module.exports.dtree["Dwebble"] = decisionTreeNode(docs);
+});
 db.find({turn: 'start', "gameState.ally.current.name": 'Scraggy'}, function (err, docs) {
-	module.exports.dtreeScraggy = decisionTreeNode(docs);
+	module.exports.dtree["Scraggy"] = decisionTreeNode(docs);
+});
+db.find({turn: 'start', "gameState.ally.current.name": 'Vullaby'}, function (err, docs) {
+	module.exports.dtree["Vullaby"] = decisionTreeNode(docs);
+});
+db.find({turn: 'start', "gameState.ally.current.name": 'Pumpkaboo'}, function (err, docs) {
+	module.exports.dtree["Pumpkaboo"] = decisionTreeNode(docs);
+});
+db.find({turn: 'start', "gameState.ally.current.name": 'Pawniard'}, function (err, docs) {
+	module.exports.dtree["Pawniard"] = decisionTreeNode(docs);
+});
+db.find({turn: 'start', "gameState.ally.current.name": 'Clamperl'}, function (err, docs) {
+	module.exports.dtree["Clamperl"] = decisionTreeNode(docs);
 });
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function logDTL() {
-  await sleep(500);
-  console.log(module.exports.dtreeScraggy);
-}
-
-logDTL();
+module.exports.forceSwitch = features.switch;

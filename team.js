@@ -184,19 +184,19 @@ module.exports = {
 			}
 		]
 	}, 
-	Chinchou: {
-		types: ["water", "electric"],
+	Clamperl: {
+		types: ["water"],
 		moves: [
 			{
-				name: "voltswitch",
-				type: "electric",
-				attack: true,
-				stab: true,
-				boost: false,
+				name: "shellsmash",
+				type: "normal",
+				attack: false,
+				stab: false,
+				boost: true,
 				hazard: false
 			},
 			{
-				name: "scald",
+				name: "surf",
 				type: "water",
 				attack: true,
 				stab: true,
@@ -204,16 +204,16 @@ module.exports = {
 				hazard: false
 			},
 			{
-				name: "thunderbolt",
-				type: "electric",
+				name: "icebeam",
+				type: "ice",
 				attack: true,
-				stab: true,
+				stab: false,
 				boost: false,
 				hazard: false
 			},
 			{
-				name: "hiddenpowerground60",
-				type: "ground",
+				name: "hiddenpowergrass60",
+				type: "grass",
 				attack: true,
 				stab: false,
 				boost: false,
@@ -226,5 +226,5 @@ module.exports = {
 				"Vullaby||eviolite|H|darkpulse,airslash,hiddenpowerfighting60,nastyplot|modest|116,0,0,160,0,200||||5|]" + 
 				"Pumpkaboo||eviolite|1|gigadrain,willowisp,fireblast,synthesis|calm|204,0,196,4,76,28||||5|]" + 
 				"Pawniard||eviolite|0|knockoff,ironhead,suckerpunch,thunderwave|jolly|0,156,36,0,116,196||||5|]" + 
-				"Chinchou||choicescarf|0|voltswitch,scald,thunderbolt,hiddenpowerground60|timid|0,0,52,232,0,224||||5|" 
+				"Clamperl||deepseatooth|H|shellsmash,surf,icebeam,hiddenpowergrass60|timid|76,0,0,248,0,184||||5|" 
 }

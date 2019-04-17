@@ -133,11 +133,9 @@ function handleData(data) {
       var req = JSON.parse(parts[1]);
       if (req.teamPreview) {
         parser.parseTeamPreview(battleData, req);
-        sendMessage(roomId + '|/choose team 2|' + req.rqid);
-      } else if (req.active && req.active.length > 0) {
+        sendMessage(roomId + '|/choose team 1|' + req.rqid);
+      } else if (req.forceSwitch || (req.active && req.active.length > 0)) {
         makeDecision(req);
-      } else if (req.forceSwitch) {
-        sendMessage(roomId + '|/choose switch 6|' + req.rqid);
       }
       break;
     case '\n':
@@ -158,6 +156,13 @@ function handleData(data) {
               battleData.ally.pokes.get(battleData.ally.current).stats = parser.baseStats();
             } else if (id == battleData.enemy.id) {
               battleData.enemy.current = parser.parsePokeName(innerParts[2]);
+              
+              // hacky solution for cases where the enemy pokemon has multiple forms which change its name
+              if (battleData.enemy.pokes.get(battleData.enemy.current) == undefined) {
+                var newName = battleData.enemy.current.substr(0, battleData.enemy.current.indexOf("-")+1) + "*";
+                battleData.enemy.current = newName;
+              }
+
               battleData.enemy.pokes.get(battleData.enemy.current).stats = parser.baseStats();
             }
             break;
@@ -267,10 +272,10 @@ async function sendMessage(msg) {
 
 async function makeDecision(req) {
   await sleep(2000);
-  if (battleData.ally.current == 'Scraggy') {
+  var gamestate = getGameState();
+  if (!req.forceSwitch) {
     console.log("using dtl");
-    var root = dtl.dtreeScraggy;
-    var gamestate = getGameState();
+    var root = dtl.dtree[battleData.ally.current];
     while(true) {
       if (root.func != null) {
         if (root.func(gamestate)) {
@@ -287,7 +292,7 @@ async function makeDecision(req) {
       }
     }
   } else {
-    sendMessage(roomId + '|/choose move 1|' + req.rqid);
+    sendMessage(roomId + '|/choose ' + dtl.forceSwitch(gamestate) + '|' + req.rqid);
   }
 }
 

@@ -31,7 +31,7 @@ function haveSuperEffectiveMove(gameState) {
 	var ally = gameState.ally.current.name;
 	var enemyTypes = gameState.enemy.types;
 	for (var j = 0; j < teamData[ally].moves.length; j++) {
-		if (!teamData[ally].moves.attack) {
+		if (!teamData[ally].moves[j].attack) {
 			continue;
 		}
 		var move = teamData[ally].moves[j].type;
@@ -53,7 +53,7 @@ function useSuperEffectiveMove(gameState) {
 	var highestEffectiveness = 1.0;
 	var bestMove = "";
 	for (var j = 0; j < teamData[ally].moves.length; j++) {
-		if (!teamData[ally].moves.attack) {
+		if (!teamData[ally].moves[j].attack) {
 			continue;
 		}
 		var move = teamData[ally].moves[j].type;
@@ -180,7 +180,7 @@ function switchToBestAlly(gameState) {
 			var highestEffectiveness = 0;
 			var allyTypes = teamData[curr.name].types;
 			for (var j = 0; j < teamData[curr.name].moves.length; j++) {
-				if (!teamData[curr.name].moves.attack) {
+				if (!teamData[curr.name].moves[j].attack) {
 					continue;
 				}
 				var move = teamData[curr.name].moves[j].type;
@@ -222,7 +222,7 @@ function switchToBestAlly(gameState) {
 	} else {
 		// shouldn't end up here, but if we somehow do, then we must be forced to use some move
 		var action = useEffectiveStabMove(gameState);
-		if (action.length() == 5) {
+		if (action.length == 5) {
 			return "move 1";
 		} else {
 			return action;
@@ -236,10 +236,10 @@ function inTypeDisadvantage(gameState) {
 	var allyTypes = teamData[ally].types;
 	var enemyTypes = gameState.enemy.types;
 	for (var j = 0; j < teamData[ally].moves.length; j++) {
-		if (!teamData[ally].moves.attack) {
+		if (!teamData[ally].moves[j].attack) {
 			continue;
 		}
-		var move = teamData[curr.name].moves[j].type;
+		var move = teamData[ally].moves[j].type;
 		var effectiveness = 1.0;
 		for (var k = 0; k < enemyTypes.length; k++) {
 			effectiveness *= superEffectiveness[types.indexOf(move)][types.indexOf(enemyTypes[k])];

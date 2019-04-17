@@ -107,12 +107,11 @@ function handleData(data) {
                 storeAction('switch', parser.parsePokeName(innerParts[2]));
                 battleData.turnActions += 1;
               }
-              battleData.ally.current = parser.parsePokeName(innerParts[2]);
-              battleData.ally.pokes.get(battleData.ally.current).stats = parser.baseStats();
+              var side = battleData.ally;
             } else if (id == battleData.enemy.id) {
-              battleData.enemy.current = parser.parsePokeName(innerParts[2]);
-              battleData.enemy.pokes.get(battleData.enemy.current).stats = parser.baseStats();
+              var side = battleData.enemy;
             }
+            updateSwitch(side, parser.parsePokeName(innerParts[2]));
             break;
           case 'move':
             var id = innerParts[1].substr(0,2);
@@ -124,12 +123,11 @@ function handleData(data) {
           case 'drag':
             var id = innerParts[1].substr(0,2);
             if (id == battleData.ally.id) {
-              battleData.ally.current = parser.parsePokeName(innerParts[2]);
-              battleData.ally.pokes.get(battleData.ally.current).stats = parser.baseStats();
+              var side = battleData.ally;
             } else if (id == battleData.enemy.id) {
-              battleData.enemy.current = parser.parsePokeName(innerParts[2]);
-              battleData.enemy.pokes.get(battleData.enemy.current).stats = parser.baseStats();
+              var side = battleData.enemy;
             }
+            updateSwitch(side, parser.parsePokeName(innerParts[2]));
             break;
           case '-damage':
             // same as heal
@@ -142,11 +140,10 @@ function handleData(data) {
 
             if (id == battleData.ally.id) {
               poke = battleData.ally.pokes.get(battleData.ally.current);
-              poke.health = newHealth;
             } else if (id == battleData.enemy.id) {
               poke = battleData.enemy.pokes.get(battleData.enemy.current);
-              poke.health = newHealth;
             }
+            updateHealth(poke, newHealth);
             break;
           case '-boost':
             var id = innerParts[1].substr(0,2);
@@ -158,7 +155,7 @@ function handleData(data) {
               poke = battleData.enemy.pokes.get(battleData.enemy.current)
             }
 
-            poke.stats[innerParts[2]] += parseInt(innerParts[3]);
+            updateStats(poke, innerParts[2], parseInt(innerParts[3]));
             break;
           case '-unboost':
             var id = innerParts[1].substr(0,2);
@@ -170,7 +167,7 @@ function handleData(data) {
               poke = battleData.enemy.pokes.get(battleData.enemy.current)
             }
 
-            poke.stats[innerParts[2]] -= parseInt(innerParts[3]);
+            updateStats(poke, innerParts[2], -1*parseInt(innerParts[3]));
             break;
           case '-weather':
             // update weather
@@ -193,14 +190,15 @@ function handleData(data) {
 
             if (id == battleData.ally.id) {
               poke = battleData.ally.pokes.get(battleData.ally.current)
-              poke.health = -1;
             } else if (id == battleData.enemy.id) {
               poke = battleData.enemy.pokes.get(battleData.enemy.current)
-              poke.health = -1;
             }
+
+            updateHealth(poke, -1);
             break;
           case 'turn':
             prevBattleData = battleData;
+            Object.assign(prevBattleData, battleData);
             battleData.turnActions = 0;
             battleData.turn += 1;
             break;
@@ -208,6 +206,25 @@ function handleData(data) {
       }
       break;
   }
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// little bit of a hack - update attributes late so that the previous battle data isn't messed up
+async function updateStats(poke, stat, value) {
+  await sleep(1000);
+  poke.stats[stat] += value;
+}
+async function updateHealth(poke, newHealth) {
+  await sleep(1000);
+  poke.health += newHealth;
+}
+async function updateSwitch(side, name) {
+  await sleep(1000);
+  side.current = name;
+  side.pokes.get(side.current).stats = parser.baseStats();
 }
 
 // use previous battle data because we want game state before the turn
