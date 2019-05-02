@@ -70,6 +70,8 @@ function handleData(data) {
   var parts;
   if(data.charAt(0) === '|') {
     parts = data.substr(1).split('|');
+  } else if (data.charAt(0) === '\n') {
+    parts = data.substr(2).split('|');
   } else {
     parts = [];
   }
